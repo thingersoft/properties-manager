@@ -5,4 +5,4 @@ A container agnostic tool for application wide configuration through properties 
 ### Features
   - Hot reloading
   - Multiple source files aggregation
-  - Declarative and programmatic properties injection
+  - Declarative + programmatic properties injection
