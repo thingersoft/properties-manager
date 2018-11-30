@@ -15,10 +15,18 @@ import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import io.github.thingersoft.pm.annotations.Property;
+
 public class PropertiesInjectorTest {
 
 	private static final String[] FORMATTING_LABELS = { "1", "2" };
 	private static final Map<String, Properties> PROPERTIES_FILES_MAP = new LinkedHashMap<>();
+	private static final String BASE_KEY_NAME = "key";
+
+	private static final String ANNOTATION_KEY = BASE_KEY_NAME + "11";
+
+	@Property(ANNOTATION_KEY)
+	private String annotationTest;
 
 	@BeforeClass
 	public static void initProperties() throws IOException {
@@ -26,7 +34,7 @@ public class PropertiesInjectorTest {
 			File temporaryFile = File.createTempFile("properties_injector_test" + formattingFileLabel, null);
 			Properties properties = new Properties();
 			for (String formattingPropertyLabel : FORMATTING_LABELS) {
-				properties.setProperty("key" + formattingFileLabel + formattingPropertyLabel, "value" + formattingPropertyLabel);
+				properties.setProperty(BASE_KEY_NAME + formattingFileLabel + formattingPropertyLabel, "value" + formattingPropertyLabel);
 			}
 			PROPERTIES_FILES_MAP.put(temporaryFile.getAbsolutePath(), properties);
 			try (FileOutputStream fos = new FileOutputStream(temporaryFile)) {
@@ -73,6 +81,13 @@ public class PropertiesInjectorTest {
 		}
 		Thread.sleep(500);
 		checkProperty(propertiesToEditFileEntry);
+	}
+
+	@Test
+	public void injectThroughAnnotation() {
+		Entry<String, Properties> propertyFileEntry = PROPERTIES_FILES_MAP.entrySet().iterator().next();
+		PropertiesInjector.loadProperties(false, propertyFileEntry.getKey());
+		assertTrue(propertyFileEntry.getValue().getProperty(ANNOTATION_KEY).equals(annotationTest));
 	}
 
 	private void checkProperty(Entry<String, Properties> propertyFileEntry) {
