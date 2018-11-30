@@ -16,6 +16,9 @@ import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.regex.Pattern;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * This class acts as a container agnostic single source of truth for configuring applications through properties files.<br>
  * Applications will likely call {@link PropertiesInjector#loadProperties(Boolean, String...)} at startup.
@@ -24,6 +27,8 @@ public class PropertiesInjector {
 
 	private PropertiesInjector() {
 	}
+
+	private static final Logger LOG = LoggerFactory.getLogger(PropertiesInjector.class);
 
 	private static ApplicationProperties applicationProperties = new ApplicationProperties();
 	private static Map<String, Thread> watcherThreads = new HashMap<>();
@@ -97,7 +102,10 @@ public class PropertiesInjector {
 		for (Thread watcherThread : watcherThreads.values()) {
 			watcherThread.interrupt();
 		}
-		watcherThreads = new HashMap<>();
+		if (!watcherThreads.isEmpty()) {
+			LOG.info("Properties monitoring stopped");
+			watcherThreads = new HashMap<>();
+		}
 	}
 
 	/**
@@ -195,6 +203,7 @@ public class PropertiesInjector {
 			Properties propertiesToLoad = new Properties();
 			propertiesToLoad.load(fis);
 			applicationProperties.putAll(propertiesToLoad);
+			LOG.info("Properties updated. Current entries: {}", applicationProperties);
 		} catch (IOException | NullPointerException e) {
 			throw new RuntimeException("Can't load properties file", e);
 		}
