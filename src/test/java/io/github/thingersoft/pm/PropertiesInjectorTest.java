@@ -79,7 +79,7 @@ public class PropertiesInjectorTest {
 		try (FileOutputStream fos = new FileOutputStream(propertiesToEditFileEntry.getKey())) {
 			propertiesToEdit.store(fos, null);
 		}
-		Thread.sleep(500);
+		Thread.sleep(PropertiesInjector.POLL_INTERVAL + 500);
 		checkProperty(propertiesToEditFileEntry);
 	}
 

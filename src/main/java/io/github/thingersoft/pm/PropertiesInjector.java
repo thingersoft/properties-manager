@@ -1,21 +1,21 @@
 package io.github.thingersoft.pm;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.ClosedWatchServiceException;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
-import java.nio.file.StandardWatchEventKinds;
-import java.nio.file.WatchEvent;
-import java.nio.file.WatchKey;
-import java.nio.file.WatchService;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.regex.Pattern;
 
+import org.apache.commons.io.monitor.FileAlterationListener;
+import org.apache.commons.io.monitor.FileAlterationListenerAdaptor;
+import org.apache.commons.io.monitor.FileAlterationMonitor;
+import org.apache.commons.io.monitor.FileAlterationObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +31,8 @@ public class PropertiesInjector {
 	private static final Logger LOG = LoggerFactory.getLogger(PropertiesInjector.class);
 
 	private static ApplicationProperties applicationProperties = new ApplicationProperties();
-	private static Map<String, Thread> watcherThreads = new HashMap<>();
+	private static Map<String, FileAlterationMonitor> monitors = new HashMap<>();
+	public static final long POLL_INTERVAL = 1000;
 
 	/**
 	 * @see PropertiesInjector#loadProperties(Boolean, String...)
@@ -42,7 +43,7 @@ public class PropertiesInjector {
 
 	/**
 	 * Load properties from the provided locations and merges them into the centralized storage.<br>
-	 * When {@code hotReload} is {@code true} a new watcher thread will be spawned for each location provided.<br>
+	 * When {@code hotReload} is {@code true} a new monitor thread will be spawned for each location provided.<br>
 	 * In this case the caller application must invoke {@link PropertiesInjector#stopWatching()} before shutting down.
 	 * 
 	 * @param hotReload
@@ -50,66 +51,72 @@ public class PropertiesInjector {
 	 * 
 	 * @param propertiesLocations
 	 * file system locations of properties
+	 * @throws Exception 
 	 */
 	public synchronized static void loadProperties(Boolean hotReload, String... propertiesLocations) {
 		for (final String propertiesLocation : propertiesLocations) {
 			storeProperties(propertiesLocation);
 			if (hotReload == null || hotReload) {
-				Thread watcherThread = new Thread(new Runnable() {
 
-					private long lastModified = -1;
+				final Path propertiesPath = FileSystems.getDefault().getPath(propertiesLocation);
+				Path propertiesDirectory = propertiesPath.getParent();
 
+				FileAlterationObserver observer = new FileAlterationObserver(propertiesDirectory.toString(), new FileFilter() {
 					@Override
-					public void run() {
-						Path propertiesPath = FileSystems.getDefault().getPath(propertiesLocation);
-						Path propertiesDirectory = propertiesPath.getParent();
-						try (final WatchService watchService = FileSystems.getDefault().newWatchService()) {
-							propertiesDirectory.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY, StandardWatchEventKinds.ENTRY_CREATE);
-							while (true) {
-								final WatchKey wk = watchService.take();
-								for (WatchEvent<?> event : wk.pollEvents()) {
-									final Path changed = (Path) event.context();
-									if (changed.equals(propertiesPath.getFileName())
-											&& propertiesDirectory.resolve(changed).toFile().lastModified() != lastModified) {
-										lastModified = propertiesDirectory.resolve(changed).toFile().lastModified();
-										storeProperties(propertiesLocation);
-									}
-								}
-								boolean valid = wk.reset();
-								if (!valid) {
-									throw new RuntimeException("Can't resume properties file monitoring: the watch key is no longer valid");
-								}
-							}
-						} catch (IOException e) {
-							throw new RuntimeException("Can't start monitoring properties file", e);
-						} catch (InterruptedException | ClosedWatchServiceException e) {
-							// JUST STOPPED WATCHING
-						}
+					public boolean accept(File pathname) {
+						return propertiesPath.equals(pathname.toPath());
 					}
 				});
+				FileAlterationMonitor monitor = new FileAlterationMonitor(POLL_INTERVAL);
+				FileAlterationListener listener = new FileAlterationListenerAdaptor() {
 
-				watcherThreads.put(propertiesLocation, watcherThread);
+					@Override
+					public void onFileChange(File file) {
+						LOG.info("Change detected on properties file {}", propertiesLocation);
+						storeProperties(propertiesLocation);
+					}
 
-				watcherThread.start();
+					@Override
+					public void onFileCreate(File file) {
+					}
+
+					@Override
+					public void onFileDelete(File file) {
+					}
+				};
+				observer.addListener(listener);
+				monitor.addObserver(observer);
+				try {
+					monitor.start();
+					monitors.put(propertiesLocation, monitor);
+				} catch (Exception e) {
+					throw new RuntimeException("Can't start monitoring properties " + propertiesLocation, e);
+				}
 			}
 		}
 	}
 
 	/**
 	 * Stops all threads watching for file changes. 
+	 * @throws Exception 
 	 */
 	public synchronized static void stopWatching() {
-		for (Thread watcherThread : watcherThreads.values()) {
-			watcherThread.interrupt();
+		for (FileAlterationMonitor monitor : monitors.values()) {
+			try {
+				monitor.stop();
+			} catch (Exception e) {
+				LOG.error("Failed stopping properties monitor " + monitor, e);
+			}
 		}
-		if (!watcherThreads.isEmpty()) {
+		if (!monitors.isEmpty()) {
 			LOG.info("Properties monitoring stopped");
-			watcherThreads = new HashMap<>();
+			monitors = new HashMap<>();
 		}
 	}
 
 	/**
 	 * Resets {@link PropertiesInjector} to its initial state. 
+	 * @throws Exception 
 	 */
 	public synchronized static void reset() {
 		stopWatching();
