@@ -4,9 +4,14 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
@@ -32,7 +37,11 @@ public class PropertiesInjector {
 
 	private static ApplicationProperties applicationProperties = new ApplicationProperties();
 	private static Map<String, FileAlterationMonitor> monitors = new HashMap<>();
-	public static final long POLL_INTERVAL = 1000;
+
+	private static final long POLL_INTERVAL = 1000;
+
+	private static String datePattern = new SimpleDateFormat().toPattern();
+	private static Locale locale = Locale.getDefault();
 
 	/**
 	 * @see PropertiesInjector#loadProperties(Boolean, String...)
@@ -72,7 +81,7 @@ public class PropertiesInjector {
 
 					@Override
 					public void onFileChange(File file) {
-						LOG.info("Change detected on properties file {}", propertiesLocation);
+						LOG.info("Change detected for properties file {}", propertiesLocation);
 						storeProperties(propertiesLocation);
 					}
 
@@ -83,6 +92,7 @@ public class PropertiesInjector {
 					@Override
 					public void onFileDelete(File file) {
 					}
+
 				};
 				observer.addListener(listener);
 				monitor.addObserver(observer);
@@ -171,6 +181,82 @@ public class PropertiesInjector {
 	}
 
 	/**
+	 * Gets a single property from the centralized storage.
+	 * 
+	 * @param key
+	 *  property key
+	 *  
+	 * @return
+	 * property value as {@code BigDecimal}
+	 * 
+	 * @throws NumberFormatException
+	 * if the property value does not contain a parsable {@code BigDecimal}.
+	 * 
+	 */
+	public static BigDecimal getBigDecimal(String key) throws NumberFormatException {
+		return new BigDecimal(getProperty(key));
+	}
+
+	/**
+	 * Gets a single property from the centralized storage.
+	 * 
+	 * @param key
+	 *  property key
+	 *  
+	 * @return
+	 * property value as {@code Float}
+	 * 
+	 * @throws NumberFormatException
+	 * if the property value does not contain a parsable {@code Float}.
+	 * 
+	 */
+	public static Float getFloat(String key) throws NumberFormatException {
+		return new Float(getProperty(key));
+	}
+
+	/**
+	 * Gets a single property from the centralized storage.
+	 * 
+	 * @param key
+	 *  property key
+	 *  
+	 * @return
+	 * property value as {@code Double}
+	 * 
+	 * @throws NumberFormatException
+	 * if the property value does not contain a parsable {@code Double}.
+	 * 
+	 */
+	public static Double getDouble(String key) throws NumberFormatException {
+		return new Double(getProperty(key));
+	}
+
+	/**
+	 * Gets a single property from the centralized storage.
+	 * 
+	 * @param key
+	 *  property key
+	 *  
+	 * @return
+	 * property value as {@code Date}
+	 * 
+	 * @throws IllegalArgumentException 
+	 * if the property value can't be parsed as {@code Date} using current {@code datePattern} and {@code locale}.
+	 * 
+	 * @see 
+	 * PropertiesInjector#setDatePattern(String)
+	 * @see
+	 * PropertiesInjector#setLocale(Locale)
+	 */
+	public static Date getDate(String key) throws IllegalArgumentException {
+		try {
+			return new SimpleDateFormat(datePattern, locale).parse(getProperty(key));
+		} catch (ParseException e) {
+			throw new IllegalArgumentException("Can't parse date property", e);
+		}
+	}
+
+	/**
 	 * @return
 	 * the current set of properties
 	 */
@@ -214,6 +300,26 @@ public class PropertiesInjector {
 		} catch (IOException | NullPointerException e) {
 			throw new RuntimeException("Can't load properties file", e);
 		}
+	}
+
+	public static long getPollInterval() {
+		return POLL_INTERVAL;
+	}
+
+	public static String getDatePattern() {
+		return datePattern;
+	}
+
+	public static void setDatePattern(String datePattern) {
+		PropertiesInjector.datePattern = datePattern;
+	}
+
+	public static Locale getLocale() {
+		return locale;
+	}
+
+	public static void setLocale(Locale locale) {
+		PropertiesInjector.locale = locale;
 	}
 
 }
