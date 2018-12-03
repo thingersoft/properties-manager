@@ -6,7 +6,7 @@ import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 
-import io.github.thingersoft.pm.PropertiesInjector;
+import io.github.thingersoft.pm.PropertiesStore;
 import io.github.thingersoft.pm.SupportedTypes;
 import io.github.thingersoft.pm.annotations.Property;
 
@@ -28,25 +28,25 @@ public class InjectionAspect {
 
 		switch (supportedType) {
 		case BIGDECIMAL:
-			propertyValue = PropertiesInjector.getBigDecimal(propertyKey);
+			propertyValue = PropertiesStore.getBigDecimal(propertyKey);
 			break;
 		case DATE:
-			propertyValue = PropertiesInjector.getDate(propertyKey);
+			propertyValue = PropertiesStore.getDate(propertyKey);
 			break;
 		case DOUBLE:
-			propertyValue = PropertiesInjector.getDouble(propertyKey);
+			propertyValue = PropertiesStore.getDouble(propertyKey);
 			break;
 		case FLOAT:
-			propertyValue = PropertiesInjector.getFloat(propertyKey);
+			propertyValue = PropertiesStore.getFloat(propertyKey);
 			break;
 		case INTEGER:
-			propertyValue = PropertiesInjector.getInteger(propertyKey);
+			propertyValue = PropertiesStore.getInteger(propertyKey);
 			break;
 		case LONG:
-			propertyValue = PropertiesInjector.getLong(propertyKey);
+			propertyValue = PropertiesStore.getLong(propertyKey);
 			break;
 		case STRING:
-			propertyValue = PropertiesInjector.getProperty(propertyKey);
+			propertyValue = PropertiesStore.getProperty(propertyKey);
 			break;
 		}
 

@@ -21,7 +21,7 @@ import org.junit.Test;
 
 import io.github.thingersoft.pm.annotations.Property;
 
-public class PropertiesInjectorTest {
+public class PropertiesStoreTest {
 
 	private static final String STRING_PROPERTIES_LABEL = "string_properties_file";
 	private static final String TYPED_PROPERTIES_LABEL = "typed_properties_file";
@@ -79,7 +79,7 @@ public class PropertiesInjectorTest {
 
 	@After
 	public void reset() {
-		PropertiesInjector.reset();
+		PropertiesStore.reset();
 	}
 
 	@Test
@@ -91,7 +91,7 @@ public class PropertiesInjectorTest {
 	@Test
 	public void loadMultiple() {
 		for (String tempFileLocation : PROPERTIES_FILES_MAP.keySet()) {
-			PropertiesInjector.loadProperties(false, tempFileLocation);
+			PropertiesStore.loadProperties(false, tempFileLocation);
 		}
 		for (Entry<String, Properties> propertyFileEntry : PROPERTIES_FILES_MAP.entrySet()) {
 			checkProperties(propertyFileEntry);
@@ -106,7 +106,7 @@ public class PropertiesInjectorTest {
 		try (FileOutputStream fos = new FileOutputStream(typedPropertiesFileEntry.getKey())) {
 			propertiesToEdit.store(fos, null);
 		}
-		Thread.sleep(PropertiesInjector.getPollInterval() + 500);
+		Thread.sleep(PropertiesStore.getPollInterval() + 500);
 		checkProperties(typedPropertiesFileEntry);
 	}
 
@@ -163,14 +163,14 @@ public class PropertiesInjectorTest {
 				break;
 			}
 		}
-		PropertiesInjector.loadProperties(hotReload, typedPropertiesFileEntry.getKey());
+		PropertiesStore.loadProperties(hotReload, typedPropertiesFileEntry.getKey());
 		return typedPropertiesFileEntry;
 	}
 
 	private void checkProperties(Entry<String, Properties> propertyFileEntry) {
 		Properties inMemoryProperties = propertyFileEntry.getValue();
 		for (Object key : inMemoryProperties.keySet()) {
-			assertTrue(inMemoryProperties.get(key).equals(PropertiesInjector.getProperty((String) key)));
+			assertTrue(inMemoryProperties.get(key).equals(PropertiesStore.getProperty((String) key)));
 		}
 	}
 

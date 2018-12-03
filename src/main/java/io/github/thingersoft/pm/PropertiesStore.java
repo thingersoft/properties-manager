@@ -26,14 +26,14 @@ import org.slf4j.LoggerFactory;
 
 /**
  * This class acts as a container agnostic single source of truth for configuring applications through properties files.<br>
- * Applications will likely call {@link PropertiesInjector#loadProperties(Boolean, String...)} at startup.
+ * Applications will likely call {@link PropertiesStore#loadProperties(Boolean, String...)} at startup.
  */
-public class PropertiesInjector {
+public class PropertiesStore {
 
-	private PropertiesInjector() {
+	private PropertiesStore() {
 	}
 
-	private static final Logger LOG = LoggerFactory.getLogger(PropertiesInjector.class);
+	private static final Logger LOG = LoggerFactory.getLogger(PropertiesStore.class);
 
 	private static ApplicationProperties applicationProperties = new ApplicationProperties();
 	private static Map<String, FileAlterationMonitor> monitors = new HashMap<>();
@@ -44,7 +44,7 @@ public class PropertiesInjector {
 	private static Locale locale = Locale.getDefault();
 
 	/**
-	 * @see PropertiesInjector#loadProperties(Boolean, String...)
+	 * @see PropertiesStore#loadProperties(Boolean, String...)
 	 */
 	public synchronized static void loadProperties(String... propertiesLocations) {
 		loadProperties(true, propertiesLocations);
@@ -53,7 +53,7 @@ public class PropertiesInjector {
 	/**
 	 * Load properties from the provided locations and merges them into the centralized storage.<br>
 	 * When {@code hotReload} is {@code true} a new monitor thread will be spawned for each location provided.<br>
-	 * In this case the caller application must invoke {@link PropertiesInjector#stopWatching()} before shutting down.
+	 * In this case the caller application must invoke {@link PropertiesStore#stopWatching()} before shutting down.
 	 * 
 	 * @param hotReload
 	 * changes monitoring flag - defaults to {@code true}
@@ -125,7 +125,7 @@ public class PropertiesInjector {
 	}
 
 	/**
-	 * Resets {@link PropertiesInjector} to its initial state. 
+	 * Resets {@link PropertiesStore} to its initial state. 
 	 * @throws Exception 
 	 */
 	public synchronized static void reset() {
@@ -244,9 +244,9 @@ public class PropertiesInjector {
 	 * if the property value can't be parsed as {@code Date} using current {@code datePattern} and {@code locale}.
 	 * 
 	 * @see 
-	 * PropertiesInjector#setDatePattern(String)
+	 * PropertiesStore#setDatePattern(String)
 	 * @see
-	 * PropertiesInjector#setLocale(Locale)
+	 * PropertiesStore#setLocale(Locale)
 	 */
 	public static Date getDate(String key) throws IllegalArgumentException {
 		try {
@@ -311,7 +311,7 @@ public class PropertiesInjector {
 	}
 
 	public static void setDatePattern(String datePattern) {
-		PropertiesInjector.datePattern = datePattern;
+		PropertiesStore.datePattern = datePattern;
 	}
 
 	public static Locale getLocale() {
@@ -319,7 +319,7 @@ public class PropertiesInjector {
 	}
 
 	public static void setLocale(Locale locale) {
-		PropertiesInjector.locale = locale;
+		PropertiesStore.locale = locale;
 	}
 
 }
