@@ -36,9 +36,8 @@
 	</distributionManagement>
 	
 	<modules>
-		<module>api</module>
-		<module>aspectj</module>
 		<module>commons-test</module>
+		<module>api</module>
 	</modules>
 	
 	<properties>

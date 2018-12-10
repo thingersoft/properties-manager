@@ -4,13 +4,18 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
+import java.nio.file.DirectoryStream;
 import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -21,12 +26,18 @@ import org.apache.commons.io.monitor.FileAlterationListener;
 import org.apache.commons.io.monitor.FileAlterationListenerAdaptor;
 import org.apache.commons.io.monitor.FileAlterationMonitor;
 import org.apache.commons.io.monitor.FileAlterationObserver;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.github.classgraph.ClassGraph;
+import io.github.classgraph.ClassInfo;
+import io.github.classgraph.ClassInfoList;
+import io.github.classgraph.ScanResult;
+import io.github.thingersoft.pm.api.annotations.Property;
+
 /**
  * This class acts as a container agnostic single source of truth for configuring applications through properties files.<br>
- * Applications will likely call {@link PropertiesStore#loadProperties(Boolean, String...)} at startup.
  */
 public class PropertiesStore {
 
@@ -35,75 +46,195 @@ public class PropertiesStore {
 
 	private static final Logger LOG = LoggerFactory.getLogger(PropertiesStore.class);
 
-	private static ApplicationProperties applicationProperties = new ApplicationProperties();
+	private static Properties applicationProperties = new Properties();
 	private static Map<String, FileAlterationMonitor> monitors = new HashMap<>();
+	private static Map<String, Field> injectionMap = new HashMap<>();
 
 	private static final long POLL_INTERVAL = 1000;
 
 	private static String datePattern = new SimpleDateFormat().toPattern();
 	private static Locale locale = Locale.getDefault();
+	private static boolean hotReload = true;
+	private static String obfuscatedPropertyPattern;
+	private static String obfuscatedPropertyPlaceholder = "******";
+
+	static {
+		try (ScanResult scanResult = new ClassGraph().enableAllInfo().scan()) {
+			ClassInfoList classInfoList = scanResult.getClassesWithAnnotation(io.github.thingersoft.pm.api.annotations.Properties.class.getName());
+			for (ClassInfo mappedClassInfo : classInfoList) {
+				Class<?> mappedClass = mappedClassInfo.loadClass();
+				for (Field field : mappedClass.getDeclaredFields()) {
+					if (field.isAnnotationPresent(Property.class)) {
+						field.setAccessible(true);
+						injectionMap.put(field.getAnnotation(Property.class).value(), field);
+					}
+				}
+
+				io.github.thingersoft.pm.api.annotations.Properties propertiesAnnotation = mappedClass
+						.getAnnotation(io.github.thingersoft.pm.api.annotations.Properties.class);
+
+				setHotReload(propertiesAnnotation.hotReload());
+				if (StringUtils.isNotBlank(propertiesAnnotation.datePattern())) {
+					setDatePattern(propertiesAnnotation.datePattern());
+				}
+				if (StringUtils.isNotBlank(propertiesAnnotation.obfuscatedPropertyPattern())) {
+					setObfuscatedPropertyPattern(propertiesAnnotation.obfuscatedPropertyPattern());
+				}
+				if (StringUtils.isNotBlank(propertiesAnnotation.obfuscatedPropertyPlaceholder())) {
+					setObfuscatedPropertyPlaceholder(propertiesAnnotation.obfuscatedPropertyPlaceholder());
+				}
+				if (StringUtils.isNotBlank(propertiesAnnotation.locale())) {
+					setLocale(new Locale(propertiesAnnotation.locale()));
+				}
+
+				loadProperties(propertiesAnnotation.propertiesLocations());
+				loadPropertiesByVariables(propertiesAnnotation.propertiesLocationsVariables());
+			}
+		} catch (IllegalArgumentException e) {
+			throw new RuntimeException("Properties injection mapping failed", e);
+		}
+	}
 
 	/**
+	 * Load properties looking for locations into system or environment variables.<br>
+	 * @param propertiesLocationsVariables
+	 * system or environment variables containing locations of properties
+	 * 
 	 * @see PropertiesStore#loadProperties(Boolean, String...)
 	 */
-	public synchronized static void loadProperties(String... propertiesLocations) {
-		loadProperties(true, propertiesLocations);
+	public synchronized static void loadPropertiesByVariables(String... propertiesLocationsVariables) {
+		List<String> propertiesLocations = new ArrayList<>();
+		for (String propertiesLocationVariable : propertiesLocationsVariables) {
+			String propertiesLocation = System.getProperty(propertiesLocationVariable) != null ? System.getProperty(propertiesLocationVariable)
+					: System.getenv(propertiesLocationVariable);
+			propertiesLocations.add(propertiesLocation);
+		}
+		loadProperties(propertiesLocations.toArray(new String[propertiesLocations.size()]));
 	}
 
 	/**
 	 * Load properties from the provided locations and merges them into the centralized storage.<br>
-	 * When {@code hotReload} is {@code true} a new monitor thread will be spawned for each location provided.<br>
+	 * If location is a folder each *.properties file inside will be loaded.<br>
+	 * When {@code hotReload} is {@code true} a new monitor thread will be spawned for each scanned properties file.<br>
 	 * In this case the caller application must invoke {@link PropertiesStore#stopWatching()} before shutting down.
-	 * 
-	 * @param hotReload
-	 * changes monitoring flag - defaults to {@code true}
 	 * 
 	 * @param propertiesLocations
 	 * file system locations of properties
-	 * @throws Exception 
 	 */
-	public synchronized static void loadProperties(Boolean hotReload, String... propertiesLocations) {
+	public synchronized static void loadProperties(String... propertiesLocations) {
 		for (final String propertiesLocation : propertiesLocations) {
-			storeProperties(propertiesLocation);
-			if (hotReload == null || hotReload) {
-
-				final Path propertiesPath = FileSystems.getDefault().getPath(propertiesLocation);
-				Path propertiesDirectory = propertiesPath.getParent();
-
-				FileAlterationObserver observer = new FileAlterationObserver(propertiesDirectory.toString(), new FileFilter() {
-					@Override
-					public boolean accept(File pathname) {
-						return propertiesPath.equals(pathname.toPath());
-					}
-				});
-				FileAlterationMonitor monitor = new FileAlterationMonitor(POLL_INTERVAL);
-				FileAlterationListener listener = new FileAlterationListenerAdaptor() {
-
-					@Override
-					public void onFileChange(File file) {
-						LOG.info("Change detected for properties file {}", propertiesLocation);
-						storeProperties(propertiesLocation);
-					}
-
-					@Override
-					public void onFileCreate(File file) {
-					}
-
-					@Override
-					public void onFileDelete(File file) {
-					}
-
-				};
-				observer.addListener(listener);
-				monitor.addObserver(observer);
+			final Path propertiesPath = FileSystems.getDefault().getPath(propertiesLocation);
+			if (propertiesPath.toFile().isDirectory()) {
 				try {
-					monitor.start();
-					monitors.put(propertiesLocation, monitor);
-				} catch (Exception e) {
-					throw new RuntimeException("Can't start monitoring properties " + propertiesLocation, e);
+					DirectoryStream<Path> propertiesStream = Files.newDirectoryStream(propertiesPath, "*.properties");
+					for (Path propertiesFilePath : propertiesStream) {
+						internalLoadProperties(propertiesFilePath.toString());
+					}
+					propertiesStream.close();
+				} catch (IOException e) {
+					throw new RuntimeException(e);
 				}
+			} else {
+				internalLoadProperties(propertiesLocation);
 			}
 		}
+	}
+
+	private static void internalLoadProperties(final String propertiesLocation) {
+		updateProperties(propertiesLocation);
+		if (hotReload) {
+
+			final Path propertiesPath = FileSystems.getDefault().getPath(propertiesLocation);
+			Path propertiesDirectory = propertiesPath.getParent();
+
+			FileAlterationObserver observer = new FileAlterationObserver(propertiesDirectory.toString(), new FileFilter() {
+				@Override
+				public boolean accept(File pathname) {
+					return propertiesPath.equals(pathname.toPath());
+				}
+			});
+			FileAlterationMonitor monitor = new FileAlterationMonitor(POLL_INTERVAL);
+			FileAlterationListener listener = new FileAlterationListenerAdaptor() {
+
+				@Override
+				public void onFileChange(File file) {
+					LOG.info("Change detected for properties file {}", propertiesLocation);
+					updateProperties(propertiesLocation);
+				}
+
+				@Override
+				public void onFileCreate(File file) {
+				}
+
+				@Override
+				public void onFileDelete(File file) {
+				}
+
+			};
+			observer.addListener(listener);
+			monitor.addObserver(observer);
+			try {
+				monitor.start();
+				monitors.put(propertiesLocation, monitor);
+			} catch (Exception e) {
+				throw new RuntimeException("Can't start monitoring properties " + propertiesLocation, e);
+			}
+		}
+	}
+
+	private synchronized static void updateProperties(String propertiesLocation) {
+
+		try (FileInputStream fis = new FileInputStream(new File(propertiesLocation))) {
+			Properties propertiesToLoad = new Properties();
+			propertiesToLoad.load(fis);
+			applicationProperties.putAll(propertiesToLoad);
+			LOG.info("Properties updated. Current entries: {}", toText());
+		} catch (IOException | NullPointerException e) {
+			throw new RuntimeException("Can't load properties file", e);
+		}
+
+		for (Entry<String, Field> injectionEntry : injectionMap.entrySet()) {
+			try {
+
+				Field field = injectionEntry.getValue();
+				SupportedTypes supportedType = SupportedTypes.getSupportedType(field.getType());
+				if (supportedType == null) {
+					throw new RuntimeException("Unsupported field type: " + field.getType());
+				}
+
+				String propertyKey = field.getAnnotation(Property.class).value();
+				Object propertyValue = null;
+
+				switch (supportedType) {
+				case BIGDECIMAL:
+					propertyValue = PropertiesStore.getBigDecimal(propertyKey);
+					break;
+				case DATE:
+					propertyValue = PropertiesStore.getDate(propertyKey);
+					break;
+				case DOUBLE:
+					propertyValue = PropertiesStore.getDouble(propertyKey);
+					break;
+				case FLOAT:
+					propertyValue = PropertiesStore.getFloat(propertyKey);
+					break;
+				case INTEGER:
+					propertyValue = PropertiesStore.getInteger(propertyKey);
+					break;
+				case LONG:
+					propertyValue = PropertiesStore.getLong(propertyKey);
+					break;
+				case STRING:
+					propertyValue = PropertiesStore.getProperty(propertyKey);
+					break;
+				}
+				field.set(null, propertyValue);
+
+			} catch (IllegalAccessException e) {
+				throw new RuntimeException(e);
+			}
+		}
+
 	}
 
 	/**
@@ -130,7 +261,7 @@ public class PropertiesStore {
 	 */
 	public synchronized static void reset() {
 		stopWatching();
-		applicationProperties = new ApplicationProperties();
+		applicationProperties = new Properties();
 	}
 
 	/**
@@ -260,7 +391,7 @@ public class PropertiesStore {
 	 * @return
 	 * the current set of properties
 	 */
-	public static ApplicationProperties getProperties() {
+	public static Properties getProperties() {
 		return applicationProperties;
 	}
 
@@ -273,8 +404,8 @@ public class PropertiesStore {
 	 * @return
 	 * the matching set of properties
 	 */
-	public static ApplicationProperties getProperties(String keyPattern) {
-		ApplicationProperties filteredProperties = new ApplicationProperties();
+	public static Properties getProperties(String keyPattern) {
+		Properties filteredProperties = new Properties();
 		for (Entry<Object, Object> property : applicationProperties.entrySet()) {
 			if (Pattern.matches(keyPattern, (CharSequence) property.getKey())) {
 				filteredProperties.put(property.getKey(), property.getValue());
@@ -283,23 +414,32 @@ public class PropertiesStore {
 		return filteredProperties;
 	}
 
+	/**
+	 * Sets the key pattern of sensitive properties to be obfuscated by the {@link Properties#toString()} method.
+	 * 
+	 * @param obfuscatedPropertyPattern
+	 * regular expression of sensitive properties keys
+	 */
 	public static void setObfuscatedPropertyPattern(String obfuscatedPropertyPattern) {
-		applicationProperties.setObfuscatedPropertyPattern(obfuscatedPropertyPattern);
+		PropertiesStore.obfuscatedPropertyPattern = obfuscatedPropertyPattern;
 	}
 
+	/**
+	 * Sets the placeholder to be used for sensitive properties values by the {@link Properties#toString()} method.
+	 * 
+	 * @param obfuscatedPropertyPlaceholder
+	 * placeholder {@code String} for sensitive properties values
+	 */
 	public static void setObfuscatedPropertyPlaceholder(String obfuscatedPropertyPlaceholder) {
-		applicationProperties.setObfuscatedPropertyPlaceholder(obfuscatedPropertyPlaceholder);
+		PropertiesStore.obfuscatedPropertyPlaceholder = obfuscatedPropertyPlaceholder;
 	}
 
-	private synchronized static void storeProperties(String propertiesLocation) {
-		try (FileInputStream fis = new FileInputStream(new File(propertiesLocation))) {
-			Properties propertiesToLoad = new Properties();
-			propertiesToLoad.load(fis);
-			applicationProperties.putAll(propertiesToLoad);
-			LOG.info("Properties updated. Current entries: {}", applicationProperties);
-		} catch (IOException | NullPointerException e) {
-			throw new RuntimeException("Can't load properties file", e);
-		}
+	public static String getObfuscatedPropertyPlaceholder() {
+		return obfuscatedPropertyPlaceholder;
+	}
+
+	public static String getObfuscatedPropertyPattern() {
+		return obfuscatedPropertyPattern;
 	}
 
 	public static long getPollInterval() {
@@ -320,6 +460,41 @@ public class PropertiesStore {
 
 	public static void setLocale(Locale locale) {
 		PropertiesStore.locale = locale;
+	}
+
+	public static boolean isHotReload() {
+		return hotReload;
+	}
+
+	public static void setHotReload(boolean hotReload) {
+		PropertiesStore.hotReload = hotReload;
+	}
+
+	/**
+	 * Returns a string representation of the current properties
+	 * in the form of a set of entries, enclosed in braces and separated
+	 * by the ASCII characters "{@code ,} " (comma and space).<br>
+	 * Each entry is rendered as the key, an equals sign {@code =}, and the
+	 * associated string value.<br>
+	 * If the key matches the {@code obfuscatedPropertyPattern} the value will be replaced by the {@code obfuscatedPropertyPlaceholder}.<br>
+	 * 
+	 * @see 
+	 * Properties#setObfuscatedPropertyPattern(String)
+	 * @see 
+	 * Properties#setObfuscatedPropertyPlaceholder(String)
+	 *
+	 * @return 
+	 * a string representation of the current properties
+	 */
+	public static String toText() {
+		List<String> properties = new ArrayList<>();
+		for (Entry<Object, Object> property : applicationProperties.entrySet()) {
+			String key = property.getKey().toString();
+			String value = obfuscatedPropertyPattern != null && key.matches(obfuscatedPropertyPattern) ? obfuscatedPropertyPlaceholder
+					: "" + property.getValue();
+			properties.add(key + "=" + value);
+		}
+		return "{" + StringUtils.join(properties, ", ") + "}";
 	}
 
 }
