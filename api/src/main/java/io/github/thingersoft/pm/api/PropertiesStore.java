@@ -39,7 +39,7 @@ import io.github.thingersoft.pm.api.annotations.Property;
 /**
  * This class acts as a container agnostic single source of truth for configuring applications through properties files.<br>
  */
-public class PropertiesStore {
+public final class PropertiesStore {
 
 	private PropertiesStore() {
 	}
@@ -52,19 +52,24 @@ public class PropertiesStore {
 
 	private static final long POLL_INTERVAL = 1000;
 
+	// EXPOSED CONFIG PARAMETERS
 	private static String datePattern = new SimpleDateFormat().toPattern();
 	private static Locale locale = Locale.getDefault();
 	private static boolean hotReload = true;
 	private static String obfuscatedPropertyPattern;
 	private static String obfuscatedPropertyPlaceholder = "******";
+	// EXPOSED CONFIG PARAMETERS
 
 	static {
+		// look for classes annotated with @Properties
 		try (ScanResult scanResult = new ClassGraph().enableAllInfo().scan()) {
 			ClassInfoList classInfoList = scanResult.getClassesWithAnnotation(io.github.thingersoft.pm.api.annotations.Properties.class.getName());
 			for (ClassInfo mappedClassInfo : classInfoList) {
 				Class<?> mappedClass = mappedClassInfo.loadClass();
+				// look for fields annotated with @Property within matching classes
 				for (Field field : mappedClass.getDeclaredFields()) {
 					if (field.isAnnotationPresent(Property.class)) {
+						// save property key and field for future injection
 						field.setAccessible(true);
 						injectionMap.put(field.getAnnotation(Property.class).value(), field);
 					}
@@ -73,6 +78,7 @@ public class PropertiesStore {
 				io.github.thingersoft.pm.api.annotations.Properties propertiesAnnotation = mappedClass
 						.getAnnotation(io.github.thingersoft.pm.api.annotations.Properties.class);
 
+				// configure and initialize store by @Properties annotation attributes (if provided)
 				setHotReload(propertiesAnnotation.hotReload());
 				if (StringUtils.isNotBlank(propertiesAnnotation.datePattern())) {
 					setDatePattern(propertiesAnnotation.datePattern());
@@ -84,7 +90,7 @@ public class PropertiesStore {
 					setObfuscatedPropertyPlaceholder(propertiesAnnotation.obfuscatedPropertyPlaceholder());
 				}
 				if (StringUtils.isNotBlank(propertiesAnnotation.locale())) {
-					setLocale(new Locale(propertiesAnnotation.locale()));
+					setLocale(propertiesAnnotation.locale());
 				}
 
 				loadProperties(propertiesAnnotation.propertiesLocations());
@@ -142,6 +148,8 @@ public class PropertiesStore {
 
 	private static void internalLoadProperties(final String propertiesLocation) {
 		updateProperties(propertiesLocation);
+
+		// if hotReload flag is active spawn a new thread to watch for properties file changes 
 		if (hotReload) {
 
 			final Path propertiesPath = FileSystems.getDefault().getPath(propertiesLocation);
@@ -184,6 +192,7 @@ public class PropertiesStore {
 
 	private synchronized static void updateProperties(String propertiesLocation) {
 
+		// load properties file and merge entries into applicationProperties
 		try (FileInputStream fis = new FileInputStream(new File(propertiesLocation))) {
 			Properties propertiesToLoad = new Properties();
 			propertiesToLoad.load(fis);
@@ -193,6 +202,7 @@ public class PropertiesStore {
 			throw new RuntimeException("Can't load properties file", e);
 		}
 
+		// perform properties injection into fields scanned at initialization stage
 		for (Entry<String, Field> injectionEntry : injectionMap.entrySet()) {
 			try {
 
@@ -205,6 +215,7 @@ public class PropertiesStore {
 				String propertyKey = field.getAnnotation(Property.class).value();
 				Object propertyValue = null;
 
+				// perform automatic type conversion
 				switch (supportedType) {
 				case BIGDECIMAL:
 					propertyValue = PropertiesStore.getBigDecimal(propertyKey);
@@ -415,7 +426,7 @@ public class PropertiesStore {
 	}
 
 	/**
-	 * Sets the key pattern of sensitive properties to be obfuscated by the {@link Properties#toString()} method.
+	 * Sets the key pattern of sensitive properties to be obfuscated by the {@link PropertiesStore#toText()} method.
 	 * 
 	 * @param obfuscatedPropertyPattern
 	 * regular expression of sensitive properties keys
@@ -425,13 +436,49 @@ public class PropertiesStore {
 	}
 
 	/**
-	 * Sets the placeholder to be used for sensitive properties values by the {@link Properties#toString()} method.
+	 * Sets the placeholder to be used for sensitive properties values by the {@link PropertiesStore#toText()} method.
 	 * 
 	 * @param obfuscatedPropertyPlaceholder
 	 * placeholder {@code String} for sensitive properties values
 	 */
 	public static void setObfuscatedPropertyPlaceholder(String obfuscatedPropertyPlaceholder) {
 		PropertiesStore.obfuscatedPropertyPlaceholder = obfuscatedPropertyPlaceholder;
+	}
+
+	/**
+	 * Sets the pattern to be used for parsing dates
+	 * 
+	 * @param datePattern
+	 */
+	public static void setDatePattern(String datePattern) {
+		PropertiesStore.datePattern = datePattern;
+	}
+
+	/**
+	 * Sets the locale to be used for parsing dates
+	 * 
+	 * @param locale
+	 */
+	public static void setLocale(Locale locale) {
+		PropertiesStore.locale = locale;
+	}
+
+	/**
+	 * @param language
+	 * 
+	 * @see #setLocale(Locale)
+	 */
+	public static void setLocale(String language) {
+		PropertiesStore.locale = new Locale(language);
+	}
+
+	/**
+	 * Enables properties file live monitoring
+	 * 
+	 * @param hotReload
+	 */
+	public static void setHotReload(boolean hotReload) {
+		PropertiesStore.hotReload = hotReload;
 	}
 
 	public static String getObfuscatedPropertyPlaceholder() {
@@ -450,24 +497,12 @@ public class PropertiesStore {
 		return datePattern;
 	}
 
-	public static void setDatePattern(String datePattern) {
-		PropertiesStore.datePattern = datePattern;
-	}
-
 	public static Locale getLocale() {
 		return locale;
 	}
 
-	public static void setLocale(Locale locale) {
-		PropertiesStore.locale = locale;
-	}
-
 	public static boolean isHotReload() {
 		return hotReload;
-	}
-
-	public static void setHotReload(boolean hotReload) {
-		PropertiesStore.hotReload = hotReload;
 	}
 
 	/**
@@ -476,7 +511,7 @@ public class PropertiesStore {
 	 * by the ASCII characters "{@code ,} " (comma and space).<br>
 	 * Each entry is rendered as the key, an equals sign {@code =}, and the
 	 * associated string value.<br>
-	 * If the key matches the {@code obfuscatedPropertyPattern} the value will be replaced by the {@code obfuscatedPropertyPlaceholder}.<br>
+	 * If the key matches the {@code obfuscatedPropertyPattern} its value will be replaced by the {@code obfuscatedPropertyPlaceholder}.<br>
 	 * 
 	 * @see 
 	 * Properties#setObfuscatedPropertyPattern(String)
