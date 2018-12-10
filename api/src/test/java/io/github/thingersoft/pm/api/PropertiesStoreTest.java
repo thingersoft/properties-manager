@@ -15,13 +15,13 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import io.github.thingersoft.pm.api.annotations.Property;
-import io.github.thingersoft.pm.test.PropertiesTest;
+import io.github.thingersoft.pm.test.PropertiesTestutility;
 
 public class PropertiesStoreTest {
 
 	@BeforeClass
 	public static void init() throws IOException {
-		PropertiesTest.initProperties();
+		PropertiesTestutility.initProperties();
 	}
 
 	@After
@@ -37,11 +37,11 @@ public class PropertiesStoreTest {
 
 	@Test
 	public void loadMultiple() {
-		for (String tempFileLocation : PropertiesTest.PROPERTIES_FILES_MAP.keySet()) {
+		for (String tempFileLocation : PropertiesTestutility.PROPERTIES_FILES_MAP.keySet()) {
 			PropertiesStore.setHotReload(false);
 			PropertiesStore.loadProperties(tempFileLocation);
 		}
-		for (Entry<String, Properties> propertyFileEntry : PropertiesTest.PROPERTIES_FILES_MAP.entrySet()) {
+		for (Entry<String, Properties> propertyFileEntry : PropertiesTestutility.PROPERTIES_FILES_MAP.entrySet()) {
 			checkProperties(propertyFileEntry);
 		}
 	}
@@ -50,7 +50,7 @@ public class PropertiesStoreTest {
 	public void hotReload() throws FileNotFoundException, IOException, InterruptedException {
 		Entry<String, Properties> typedPropertiesFileEntry = loadTypedProperties(true);
 		Properties propertiesToEdit = typedPropertiesFileEntry.getValue();
-		propertiesToEdit.put(PropertiesTest.STRING_KEY, "edited_string_value");
+		propertiesToEdit.put(PropertiesTestutility.STRING_KEY, "edited_string_value");
 		try (FileOutputStream fos = new FileOutputStream(typedPropertiesFileEntry.getKey())) {
 			propertiesToEdit.store(fos, null);
 		}
@@ -61,17 +61,17 @@ public class PropertiesStoreTest {
 	@Test
 	public void inject() {
 		loadTypedProperties(false);
-		assertTrue(PropertiesStore.getProperty(PropertiesTest.STRING_KEY).equals(PropertiesInjectionTest.stringField));
-		assertTrue(PropertiesStore.getInteger(PropertiesTest.INTEGER_KEY).equals(PropertiesInjectionTest.integerField));
-		assertTrue(PropertiesStore.getLong(PropertiesTest.LONG_KEY).equals(PropertiesInjectionTest.longField));
-		assertTrue(PropertiesStore.getFloat(PropertiesTest.FLOAT_KEY).equals(PropertiesInjectionTest.floatField));
-		assertTrue(PropertiesStore.getDouble(PropertiesTest.DOUBLE_KEY).equals(PropertiesInjectionTest.doubleField));
-		assertTrue(PropertiesStore.getBigDecimal(PropertiesTest.BIGDECIMAL_KEY).equals(PropertiesInjectionTest.bigDecimalField));
-		assertTrue(PropertiesStore.getDate(PropertiesTest.DATE_KEY).equals(PropertiesInjectionTest.dateField));
+		assertTrue(PropertiesStore.getProperty(PropertiesTestutility.STRING_KEY).equals(PropertiesInjectionTest.stringField));
+		assertTrue(PropertiesStore.getInteger(PropertiesTestutility.INTEGER_KEY).equals(PropertiesInjectionTest.integerField));
+		assertTrue(PropertiesStore.getLong(PropertiesTestutility.LONG_KEY).equals(PropertiesInjectionTest.longField));
+		assertTrue(PropertiesStore.getFloat(PropertiesTestutility.FLOAT_KEY).equals(PropertiesInjectionTest.floatField));
+		assertTrue(PropertiesStore.getDouble(PropertiesTestutility.DOUBLE_KEY).equals(PropertiesInjectionTest.doubleField));
+		assertTrue(PropertiesStore.getBigDecimal(PropertiesTestutility.BIGDECIMAL_KEY).equals(PropertiesInjectionTest.bigDecimalField));
+		assertTrue(PropertiesStore.getDate(PropertiesTestutility.DATE_KEY).equals(PropertiesInjectionTest.dateField));
 	}
 
 	private Entry<String, Properties> loadTypedProperties(boolean hotReload) {
-		Entry<String, Properties> typedPropertiesFileEntry = PropertiesTest.getTypedPropertiesTestEntry();
+		Entry<String, Properties> typedPropertiesFileEntry = PropertiesTestutility.getTypedPropertiesTestEntry();
 		PropertiesStore.setHotReload(hotReload);
 		PropertiesStore.loadProperties(typedPropertiesFileEntry.getKey());
 		return typedPropertiesFileEntry;
@@ -87,25 +87,25 @@ public class PropertiesStoreTest {
 	@io.github.thingersoft.pm.api.annotations.Properties
 	public static class PropertiesInjectionTest {
 
-		@Property(PropertiesTest.STRING_KEY)
+		@Property(PropertiesTestutility.STRING_KEY)
 		public static String stringField;
 
-		@Property(PropertiesTest.INTEGER_KEY)
+		@Property(PropertiesTestutility.INTEGER_KEY)
 		public static Integer integerField;
 
-		@Property(PropertiesTest.LONG_KEY)
+		@Property(PropertiesTestutility.LONG_KEY)
 		public static Long longField;
 
-		@Property(PropertiesTest.FLOAT_KEY)
+		@Property(PropertiesTestutility.FLOAT_KEY)
 		public static Float floatField;
 
-		@Property(PropertiesTest.DOUBLE_KEY)
+		@Property(PropertiesTestutility.DOUBLE_KEY)
 		public static Double doubleField;
 
-		@Property(PropertiesTest.BIGDECIMAL_KEY)
+		@Property(PropertiesTestutility.BIGDECIMAL_KEY)
 		public static BigDecimal bigDecimalField;
 
-		@Property(PropertiesTest.DATE_KEY)
+		@Property(PropertiesTestutility.DATE_KEY)
 		public static Date dateField;
 	}
 

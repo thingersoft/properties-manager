@@ -10,9 +10,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 
-public final class PropertiesTest {
+public final class PropertiesTestutility {
 
-	private PropertiesTest() {
+	private PropertiesTestutility() {
 
 	}
 
