@@ -66,39 +66,43 @@ public final class PropertiesStore {
 			ClassInfoList classInfoList = scanResult.getClassesWithAnnotation(io.github.thingersoft.pm.api.annotations.Properties.class.getName());
 			for (ClassInfo mappedClassInfo : classInfoList) {
 				Class<?> mappedClass = mappedClassInfo.loadClass();
-				// look for fields annotated with @Property within matching classes
-				for (Field field : mappedClass.getDeclaredFields()) {
-					if (field.isAnnotationPresent(Property.class)) {
-						// save property key and field for future injection
-						field.setAccessible(true);
-						injectionMap.put(field.getAnnotation(Property.class).value(), field);
-					}
-				}
-
-				io.github.thingersoft.pm.api.annotations.Properties propertiesAnnotation = mappedClass
-						.getAnnotation(io.github.thingersoft.pm.api.annotations.Properties.class);
-
-				// configure and initialize store by @Properties annotation attributes (if provided)
-				setHotReload(propertiesAnnotation.hotReload());
-				if (StringUtils.isNotBlank(propertiesAnnotation.datePattern())) {
-					setDatePattern(propertiesAnnotation.datePattern());
-				}
-				if (StringUtils.isNotBlank(propertiesAnnotation.obfuscatedPropertyPattern())) {
-					setObfuscatedPropertyPattern(propertiesAnnotation.obfuscatedPropertyPattern());
-				}
-				if (StringUtils.isNotBlank(propertiesAnnotation.obfuscatedPropertyPlaceholder())) {
-					setObfuscatedPropertyPlaceholder(propertiesAnnotation.obfuscatedPropertyPlaceholder());
-				}
-				if (StringUtils.isNotBlank(propertiesAnnotation.locale())) {
-					setLocale(propertiesAnnotation.locale());
-				}
-
-				loadProperties(propertiesAnnotation.propertiesLocations());
-				loadPropertiesByVariables(propertiesAnnotation.propertiesLocationsVariables());
+				initByAnnotatedClass(mappedClass);
 			}
 		} catch (IllegalArgumentException e) {
 			throw new RuntimeException("Properties injection mapping failed", e);
 		}
+	}
+
+	public static void initByAnnotatedClass(Class<?> mappedClass) {
+		// look for fields annotated with @Property within matching classes
+		for (Field field : mappedClass.getDeclaredFields()) {
+			if (field.isAnnotationPresent(Property.class)) {
+				// save property key and field for future injection
+				field.setAccessible(true);
+				injectionMap.put(field.getAnnotation(Property.class).value(), field);
+			}
+		}
+
+		io.github.thingersoft.pm.api.annotations.Properties propertiesAnnotation = mappedClass
+				.getAnnotation(io.github.thingersoft.pm.api.annotations.Properties.class);
+
+		// configure and initialize store by @Properties annotation attributes (if provided)
+		setHotReload(propertiesAnnotation.hotReload());
+		if (StringUtils.isNotBlank(propertiesAnnotation.datePattern())) {
+			setDatePattern(propertiesAnnotation.datePattern());
+		}
+		if (StringUtils.isNotBlank(propertiesAnnotation.obfuscatedPropertyPattern())) {
+			setObfuscatedPropertyPattern(propertiesAnnotation.obfuscatedPropertyPattern());
+		}
+		if (StringUtils.isNotBlank(propertiesAnnotation.obfuscatedPropertyPlaceholder())) {
+			setObfuscatedPropertyPlaceholder(propertiesAnnotation.obfuscatedPropertyPlaceholder());
+		}
+		if (StringUtils.isNotBlank(propertiesAnnotation.locale())) {
+			setLocale(propertiesAnnotation.locale());
+		}
+
+		loadProperties(propertiesAnnotation.propertiesLocations());
+		loadPropertiesByVariables(propertiesAnnotation.propertiesLocationsVariables());
 	}
 
 	/**
