@@ -1,0 +1,22 @@
+package {{ basePackage }};
+
+import io.github.thingersoft.pm.api.annotations.Property;
+import io.github.thingersoft.pm.api.annotations.Properties;
+
+@Properties(
+	propertiesLocations = { {{ joinAndWrap(propertiesLocations,',','"') }} }, 
+	propertiesLocationsVariables = { {{ joinAndWrap(propertiesLocationsVariables,',','"') }} }, 
+	hotReload = {{ hotReload }}, 
+	datePattern = "{{ datePattern }}", 
+	locale = "{{ locale }}", 
+	obfuscatedPropertyPattern = "{{ obfuscatedPropertyPattern }}", 
+	obfuscatedPropertyPlaceholder = "{{ obfuscatedPropertyPlaceholder }}"
+)
+public class ApplicationProperties {
+
+{% for property in properties %}
+	@Property("{{ property }}")
+	public static String {{ toUncapitalizedCamelCase(property) }};
+{% endfor %}
+
+}

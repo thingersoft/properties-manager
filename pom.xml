@@ -38,6 +38,7 @@
 	<modules>
 		<module>commons-test</module>
 		<module>api</module>
+		<module>maven-plugin</module>
 	</modules>
 	
 	<properties>
