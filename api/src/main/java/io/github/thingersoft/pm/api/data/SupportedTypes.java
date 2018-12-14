@@ -1,4 +1,4 @@
-package io.github.thingersoft.pm.api;
+package io.github.thingersoft.pm.api.data;
 
 import java.math.BigDecimal;
 import java.util.Date;

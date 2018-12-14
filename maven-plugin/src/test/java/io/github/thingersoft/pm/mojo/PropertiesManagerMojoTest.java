@@ -19,6 +19,7 @@ import javax.tools.ToolProvider;
 import org.junit.Test;
 
 import io.github.thingersoft.pm.api.PropertiesStore;
+import io.github.thingersoft.pm.api.data.PropertiesStoreOptions;
 
 public class PropertiesManagerMojoTest {
 
@@ -35,7 +36,7 @@ public class PropertiesManagerMojoTest {
 		}
 		Path tempDir = Files.createDirectories(FileSystems.getDefault().getPath(System.getProperty("java.io.tmpdir") + "/properties_manager_plugin"));
 
-		mojo.generateSources(Arrays.asList(testPropertiesFile, testPropertiesFile), new File(tempDir.toString()), TEST_PACKAGE, "", "", "", "", false,
+		mojo.generateSources(Arrays.asList(testPropertiesFile, testPropertiesFile), new File(tempDir.toString()), TEST_PACKAGE, new PropertiesStoreOptions(),
 				Arrays.asList(testPropertiesFile, testPropertiesFile), null);
 
 		JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();

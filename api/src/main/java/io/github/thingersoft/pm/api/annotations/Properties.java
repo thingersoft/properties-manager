@@ -8,7 +8,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import io.github.thingersoft.pm.api.PropertiesStore;
+import io.github.thingersoft.pm.api.data.PropertiesStoreOptions;
 
 /**
  * Annotation to be used on types for declarative style properties configuration and injection
@@ -28,27 +28,27 @@ public @interface Properties {
 	String[] propertiesLocationsVariables() default {};
 
 	/**
-	 * @see PropertiesStore#setHotReload(boolean)
+	 * @see PropertiesStoreOptions#setHotReload(boolean)
 	 */
 	boolean hotReload() default true;
 
 	/**
-	 * @see PropertiesStore#setDatePattern(String)
+	 * @see PropertiesStoreOptions#setDatePattern(String)
 	 */
 	String datePattern() default "";
 
 	/**
-	 * @see PropertiesStore#setLocale(String)
+	 * @see PropertiesStoreOptions#setLocale(String)
 	 */
 	String locale() default "";
 
 	/**
-	 * @see PropertiesStore#setObfuscatedPropertyPattern(String)
+	 * @see PropertiesStoreOptions#setObfuscatedPropertyPattern(String)
 	 */
 	String obfuscatedPropertyPattern() default "";
 
 	/**
-	 * @see PropertiesStore#setObfuscatedPropertyPlaceholder(String)
+	 * @see PropertiesStoreOptions#setObfuscatedPropertyPlaceholder(String)
 	 */
 	String obfuscatedPropertyPlaceholder() default "";
 

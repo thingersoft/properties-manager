@@ -38,7 +38,7 @@ public class PropertiesStoreTest {
 	@Test
 	public void loadMultiple() {
 		for (String tempFileLocation : PropertiesTestutility.PROPERTIES_FILES_MAP.keySet()) {
-			PropertiesStore.setHotReload(false);
+			PropertiesStore.getOptions().setHotReload(false);
 			PropertiesStore.loadProperties(tempFileLocation);
 		}
 		for (Entry<String, Properties> propertyFileEntry : PropertiesTestutility.PROPERTIES_FILES_MAP.entrySet()) {
@@ -72,7 +72,7 @@ public class PropertiesStoreTest {
 
 	private Entry<String, Properties> loadTypedProperties(boolean hotReload) {
 		Entry<String, Properties> typedPropertiesFileEntry = PropertiesTestutility.getTypedPropertiesTestEntry();
-		PropertiesStore.setHotReload(hotReload);
+		PropertiesStore.getOptions().setHotReload(hotReload);
 		PropertiesStore.loadProperties(typedPropertiesFileEntry.getKey());
 		return typedPropertiesFileEntry;
 	}

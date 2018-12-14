@@ -21,6 +21,7 @@ import org.jtwig.JtwigTemplate;
 import org.jtwig.environment.EnvironmentConfiguration;
 import org.jtwig.environment.EnvironmentConfigurationBuilder;
 
+import io.github.thingersoft.pm.api.data.PropertiesStoreOptions;
 import io.github.thingersoft.pm.mojo.jtwig.JoinAndWrapJtwigFunction;
 import io.github.thingersoft.pm.mojo.jtwig.ToUncapitalizedCamelCaseJtwigFunction;
 
@@ -34,17 +35,8 @@ public class PropertiesManagerMojo extends AbstractMojo {
 	private List<File> propertiesLocations;
 	@Parameter
 	private List<String> propertiesLocationsVariables;
-	@Parameter(defaultValue = "")
-	private String datePattern;
-	@Parameter(defaultValue = "")
-	private String locale;
-	@Parameter(defaultValue = "true")
-	private boolean hotReload;
-	@Parameter(defaultValue = "")
-	private String obfuscatedPropertyPattern;
-	@Parameter(defaultValue = "")
-	private String obfuscatedPropertyPlaceholder;
-
+	@Parameter
+	private PropertiesStoreOptions options;
 	@Parameter(required = true)
 	private List<File> templateFiles;
 	@Parameter(required = true)
@@ -54,13 +46,11 @@ public class PropertiesManagerMojo extends AbstractMojo {
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
-		generateSources(templateFiles, generatedSourcesDirectory, basePackage, datePattern, locale, obfuscatedPropertyPattern, obfuscatedPropertyPlaceholder,
-				hotReload, propertiesLocations, propertiesLocationsVariables);
+		generateSources(templateFiles, generatedSourcesDirectory, basePackage, options, propertiesLocations, propertiesLocationsVariables);
 	}
 
-	public void generateSources(List<File> templateFiles, File generatedSourcesDirectory, String basePackage, String datePattern, String locale,
-			String obfuscatedPropertyPattern, String obfuscatedPropertyPlaceholder, boolean hotReload, List<File> propertiesLocations,
-			List<String> propertiesLocationsVariables) {
+	public void generateSources(List<File> templateFiles, File generatedSourcesDirectory, String basePackage, PropertiesStoreOptions options,
+			List<File> propertiesLocations, List<String> propertiesLocationsVariables) {
 
 		// read properties files and merge them into a single map
 		Properties templateProperties = new Properties();
@@ -83,10 +73,9 @@ public class PropertiesManagerMojo extends AbstractMojo {
 		final EnvironmentConfiguration jTwigEnv = EnvironmentConfigurationBuilder.configuration().functions().add(new ToUncapitalizedCamelCaseJtwigFunction())
 				.add(new JoinAndWrapJtwigFunction()).and().build();
 		JtwigTemplate template = JtwigTemplate.classpathTemplate("/ApplicationProperties.twig", jTwigEnv);
-		JtwigModel model = JtwigModel.newModel().with("basePackage", basePackage).with("datePattern", datePattern).with("locale", locale)
-				.with("obfuscatedPropertyPattern", obfuscatedPropertyPattern).with("obfuscatedPropertyPlaceholder", obfuscatedPropertyPlaceholder)
-				.with("hotReload", hotReload).with("properties", templateProperties.keySet()).with("propertiesLocations", propertiesLocationsStrings)
-				.with("propertiesLocationsVariables", propertiesLocationsVariables);
+		JtwigModel model = JtwigModel.newModel().with("basePackage", basePackage).with("properties", templateProperties.keySet())
+				.with("propertiesLocations", propertiesLocationsStrings).with("propertiesLocationsVariables", propertiesLocationsVariables)
+				.with("options", options);
 		try {
 			Path outputDirectoryPath = Files.createDirectories(Paths.get(generatedSourcesDirectory.getAbsolutePath(), basePackage.replaceAll("\\.", "/")));
 			Path outputFilePath = outputDirectoryPath.resolve(GENERATED_CLASS_NAME + ".java");

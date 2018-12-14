@@ -6,11 +6,11 @@ import io.github.thingersoft.pm.api.annotations.Properties;
 @Properties(
 	propertiesLocations = { {{ joinAndWrap(propertiesLocations,',','"') }} }, 
 	propertiesLocationsVariables = { {{ joinAndWrap(propertiesLocationsVariables,',','"') }} }, 
-	hotReload = {{ hotReload }}, 
-	datePattern = "{{ datePattern }}", 
-	locale = "{{ locale }}", 
-	obfuscatedPropertyPattern = "{{ obfuscatedPropertyPattern }}", 
-	obfuscatedPropertyPlaceholder = "{{ obfuscatedPropertyPlaceholder }}"
+	hotReload = {{ options.hotReload }}, 
+	datePattern = "{{ options.datePattern }}", 
+	locale = "{{ options.locale }}", 
+	obfuscatedPropertyPattern = "{{ options.obfuscatedPropertyPattern }}", 
+	obfuscatedPropertyPlaceholder = "{{ options.obfuscatedPropertyPlaceholder }}"
 )
 public class ApplicationProperties {
 
