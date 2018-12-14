@@ -14,9 +14,9 @@ import io.github.thingersoft.pm.api.annotations.Properties;
 )
 public class ApplicationProperties {
 
-{% for property in properties %}
-	@Property("{{ property }}")
-	public static String {{ toUncapitalizedCamelCase(property) }};
+{% for fieldMapping in fieldMappings %}
+	@Property("{{ fieldMapping.propertyKey }}")
+	public static {{ fieldMapping.fieldtype.clazz.name }} {{ fieldMapping.fieldName }};
 {% endfor %}
 
 }

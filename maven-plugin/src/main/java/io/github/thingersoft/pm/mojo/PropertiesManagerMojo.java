@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -22,8 +23,8 @@ import org.jtwig.environment.EnvironmentConfiguration;
 import org.jtwig.environment.EnvironmentConfigurationBuilder;
 
 import io.github.thingersoft.pm.api.data.PropertiesStoreOptions;
+import io.github.thingersoft.pm.api.data.SupportedTypes;
 import io.github.thingersoft.pm.mojo.jtwig.JoinAndWrapJtwigFunction;
-import io.github.thingersoft.pm.mojo.jtwig.ToUncapitalizedCamelCaseJtwigFunction;
 
 @Mojo(name = PropertiesManagerMojo.GOAL)
 public class PropertiesManagerMojo extends AbstractMojo {
@@ -44,13 +45,16 @@ public class PropertiesManagerMojo extends AbstractMojo {
 	@Parameter(defaultValue = "${project.build.directory}/generated-sources/properties-manager")
 	private File generatedSourcesDirectory;
 
+	@Parameter
+	private List<FieldMapping> fieldMappings;
+
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
-		generateSources(templateFiles, generatedSourcesDirectory, basePackage, options, propertiesLocations, propertiesLocationsVariables);
+		generateSources(templateFiles, generatedSourcesDirectory, basePackage, options, propertiesLocations, propertiesLocationsVariables, fieldMappings);
 	}
 
 	public void generateSources(List<File> templateFiles, File generatedSourcesDirectory, String basePackage, PropertiesStoreOptions options,
-			List<File> propertiesLocations, List<String> propertiesLocationsVariables) {
+			List<File> propertiesLocations, List<String> propertiesLocationsVariables, List<FieldMapping> fieldMappings) {
 
 		// read properties files and merge them into a single map
 		Properties templateProperties = new Properties();
@@ -64,16 +68,32 @@ public class PropertiesManagerMojo extends AbstractMojo {
 			}
 		}
 
+		// convert backslashes style paths to forward slashes
 		List<String> propertiesLocationsStrings = new ArrayList<>();
 		for (File propertiesLocation : propertiesLocations) {
 			propertiesLocationsStrings.add(propertiesLocation.toString().replace("\\", "/"));
 		}
 
+		// merge custom field mappings (if provided) with defaults
+		List<FieldMapping> computedFieldMappings = new ArrayList<>();
+		if (fieldMappings != null) {
+			computedFieldMappings.addAll(fieldMappings);
+		}
+		for (Object key : templateProperties.keySet()) {
+			String stringKey = (String) key;
+			FieldMapping fieldMapping = new FieldMapping();
+			fieldMapping.setPropertyKey(stringKey);
+			fieldMapping.setFieldName(toUncapitalizedCamelCase(stringKey));
+			fieldMapping.setFieldtype(SupportedTypes.STRING);
+			if (!computedFieldMappings.contains(fieldMapping)) {
+				computedFieldMappings.add(fieldMapping);
+			}
+		}
+
 		// generate source file
-		final EnvironmentConfiguration jTwigEnv = EnvironmentConfigurationBuilder.configuration().functions().add(new ToUncapitalizedCamelCaseJtwigFunction())
-				.add(new JoinAndWrapJtwigFunction()).and().build();
+		final EnvironmentConfiguration jTwigEnv = EnvironmentConfigurationBuilder.configuration().functions().add(new JoinAndWrapJtwigFunction()).and().build();
 		JtwigTemplate template = JtwigTemplate.classpathTemplate("/ApplicationProperties.twig", jTwigEnv);
-		JtwigModel model = JtwigModel.newModel().with("basePackage", basePackage).with("properties", templateProperties.keySet())
+		JtwigModel model = JtwigModel.newModel().with("basePackage", basePackage).with("fieldMappings", computedFieldMappings)
 				.with("propertiesLocations", propertiesLocationsStrings).with("propertiesLocationsVariables", propertiesLocationsVariables)
 				.with("options", options);
 		try {
@@ -85,6 +105,15 @@ public class PropertiesManagerMojo extends AbstractMojo {
 		} catch (IOException e) {
 			throw new RuntimeException("Can't write to output folder", e);
 		}
+	}
+
+	private String toUncapitalizedCamelCase(String inputString) {
+		String[] splittedInputString = inputString.split("[_\\-\\.]");
+		String outputString = StringUtils.uncapitalize(splittedInputString[0]);
+		for (int i = 1; i < splittedInputString.length; i++) {
+			outputString += StringUtils.capitalize(splittedInputString[i]);
+		}
+		return outputString;
 	}
 
 }
