@@ -70,8 +70,10 @@ public class PropertiesManagerMojo extends AbstractMojo {
 
 		// convert backslashes style paths to forward slashes
 		List<String> propertiesLocationsStrings = new ArrayList<>();
-		for (File propertiesLocation : propertiesLocations) {
-			propertiesLocationsStrings.add(propertiesLocation.toString().replace("\\", "/"));
+		if (propertiesLocations != null) {
+			for (File propertiesLocation : propertiesLocations) {
+				propertiesLocationsStrings.add(propertiesLocation.toString().replace("\\", "/"));
+			}
 		}
 
 		// merge custom field mappings (if provided) with defaults
@@ -95,7 +97,7 @@ public class PropertiesManagerMojo extends AbstractMojo {
 		JtwigTemplate template = JtwigTemplate.classpathTemplate("/ApplicationProperties.twig", jTwigEnv);
 		JtwigModel model = JtwigModel.newModel().with("basePackage", basePackage).with("fieldMappings", computedFieldMappings)
 				.with("propertiesLocations", propertiesLocationsStrings).with("propertiesLocationsVariables", propertiesLocationsVariables)
-				.with("options", options);
+				.with("options", options != null ? options : new PropertiesStoreOptions());
 		try {
 			Path outputDirectoryPath = Files.createDirectories(Paths.get(generatedSourcesDirectory.getAbsolutePath(), basePackage.replaceAll("\\.", "/")));
 			Path outputFilePath = outputDirectoryPath.resolve(GENERATED_CLASS_NAME + ".java");
