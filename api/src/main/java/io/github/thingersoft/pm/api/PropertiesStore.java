@@ -20,6 +20,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.monitor.FileAlterationListener;
@@ -53,6 +54,7 @@ public final class PropertiesStore {
 	private static Map<String, Field> injectionMap = new HashMap<>();
 
 	private static final long POLL_INTERVAL = 1000;
+	private static final Pattern LOCATION_VARIABLE_PATTERN = Pattern.compile("\\{.+\\}");
 
 	private static PropertiesStoreOptions options = new PropertiesStoreOptions();
 
@@ -89,28 +91,12 @@ public final class PropertiesStore {
 		options.setObfuscatedPropertyPlaceholder(propertiesAnnotation.obfuscatedPropertyPlaceholder());
 		options.setLocale(propertiesAnnotation.locale());
 		loadProperties(propertiesAnnotation.propertiesLocations());
-		loadPropertiesByVariables(propertiesAnnotation.propertiesLocationsVariables());
-	}
-
-	/**
-	 * Load properties looking for locations into system or environment variables.<br>
-	 * @param propertiesLocationsVariables
-	 * system or environment variables containing locations of properties
-	 * 
-	 * @see PropertiesStore#loadProperties(Boolean, String...)
-	 */
-	public synchronized static void loadPropertiesByVariables(String... propertiesLocationsVariables) {
-		List<String> propertiesLocations = new ArrayList<>();
-		for (String propertiesLocationVariable : propertiesLocationsVariables) {
-			String propertiesLocation = System.getProperty(propertiesLocationVariable) != null ? System.getProperty(propertiesLocationVariable)
-					: System.getenv(propertiesLocationVariable);
-			propertiesLocations.add(propertiesLocation);
-		}
-		loadProperties(propertiesLocations.toArray(new String[propertiesLocations.size()]));
 	}
 
 	/**
 	 * Load properties from the provided locations and merges them into the centralized storage.<br>
+	 * Locations may contain system and/or environment variables within curly braces:<br><br>
+	 * {myapp.conf.folder}/app.properties<br><br>
 	 * If location is a folder each *.properties file inside will be loaded.<br>
 	 * When {@code hotReload} is {@code true} a new monitor thread will be spawned for each scanned properties file.<br>
 	 * In this case the caller application must invoke {@link PropertiesStore#stopWatching()} before shutting down.
@@ -119,7 +105,20 @@ public final class PropertiesStore {
 	 * file system locations of properties
 	 */
 	public synchronized static void loadProperties(String... propertiesLocations) {
-		for (final String propertiesLocation : propertiesLocations) {
+		List<String> interpolatedPropertiesLocations = new ArrayList<>();
+		for (String propertiesLocation : propertiesLocations) {
+			String interpolatedLocation = propertiesLocation;
+			Matcher variablesMatcher = LOCATION_VARIABLE_PATTERN.matcher(propertiesLocation);
+			while (variablesMatcher.find()) {
+				String matchedString = variablesMatcher.group();
+				String variable = matchedString.substring(1, matchedString.length() - 1);
+				String variableValue = System.getProperty(variable) != null ? System.getProperty(variable) : System.getenv(variable);
+				interpolatedLocation = interpolatedLocation.replace(matchedString, variableValue);
+			}
+			interpolatedPropertiesLocations.add(interpolatedLocation);
+		}
+
+		for (final String propertiesLocation : interpolatedPropertiesLocations) {
 			final Path propertiesPath = FileSystems.getDefault().getPath(propertiesLocation);
 			if (propertiesPath.toFile().isDirectory()) {
 				try {

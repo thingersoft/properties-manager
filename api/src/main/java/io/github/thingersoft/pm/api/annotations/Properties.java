@@ -8,6 +8,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import io.github.thingersoft.pm.api.PropertiesStore;
 import io.github.thingersoft.pm.api.data.PropertiesStoreOptions;
 
 /**
@@ -18,14 +19,12 @@ import io.github.thingersoft.pm.api.data.PropertiesStoreOptions;
 public @interface Properties {
 
 	/**
-	 * Array of properties file system locations
+	 * Array of properties file system locations.<br>
+	 * May contain system and/or environment variables enclosed by curly braces.
+	 * 
+	 * @see PropertiesStore#loadProperties
 	 */
 	String[] propertiesLocations() default {};
-
-	/**
-	 * Array of system or environment variables containing properties file system locations
-	 */
-	String[] propertiesLocationsVariables() default {};
 
 	/**
 	 * @see PropertiesStoreOptions#setHotReload(boolean)

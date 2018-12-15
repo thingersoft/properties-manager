@@ -4,8 +4,7 @@ import io.github.thingersoft.pm.api.annotations.Property;
 import io.github.thingersoft.pm.api.annotations.Properties;
 
 @Properties(
-	propertiesLocations = { {{ joinAndWrap(propertiesLocations,',','"') }} }, 
-	propertiesLocationsVariables = { {{ joinAndWrap(propertiesLocationsVariables,',','"') }} }, 
+	propertiesLocations = { {{ joinAndWrap(propertiesLocations,',','"') }} },
 	hotReload = {{ options.hotReload }}, 
 	datePattern = "{{ options.datePattern }}", 
 	locale = "{{ options.locale }}", 

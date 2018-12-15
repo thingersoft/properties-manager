@@ -33,9 +33,7 @@ public class PropertiesManagerMojo extends AbstractMojo {
 	public static final String GENERATED_CLASS_NAME = "ApplicationProperties";
 
 	@Parameter
-	private List<File> propertiesLocations;
-	@Parameter
-	private List<String> propertiesLocationsVariables;
+	private List<String> propertiesLocations;
 	@Parameter
 	private PropertiesStoreOptions options;
 	@Parameter(required = true)
@@ -50,11 +48,11 @@ public class PropertiesManagerMojo extends AbstractMojo {
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
-		generateSources(templateFiles, generatedSourcesDirectory, basePackage, options, propertiesLocations, propertiesLocationsVariables, fieldMappings);
+		generateSources(templateFiles, generatedSourcesDirectory, basePackage, options, propertiesLocations, fieldMappings);
 	}
 
 	public void generateSources(List<File> templateFiles, File generatedSourcesDirectory, String basePackage, PropertiesStoreOptions options,
-			List<File> propertiesLocations, List<String> propertiesLocationsVariables, List<FieldMapping> fieldMappings) throws MojoExecutionException {
+			List<String> propertiesLocations, List<FieldMapping> fieldMappings) throws MojoExecutionException {
 
 		// read properties files and merge them into a single map
 		Properties templateProperties = new Properties();
@@ -71,8 +69,8 @@ public class PropertiesManagerMojo extends AbstractMojo {
 		// convert backslashes style paths to forward slashes
 		List<String> propertiesLocationsStrings = new ArrayList<>();
 		if (propertiesLocations != null) {
-			for (File propertiesLocation : propertiesLocations) {
-				propertiesLocationsStrings.add(propertiesLocation.toString().replace("\\", "/"));
+			for (String propertiesLocation : propertiesLocations) {
+				propertiesLocationsStrings.add(propertiesLocation.replace("\\", "/"));
 			}
 		}
 
@@ -96,8 +94,7 @@ public class PropertiesManagerMojo extends AbstractMojo {
 		final EnvironmentConfiguration jTwigEnv = EnvironmentConfigurationBuilder.configuration().functions().add(new JoinAndWrapJtwigFunction()).and().build();
 		JtwigTemplate template = JtwigTemplate.classpathTemplate("/ApplicationProperties.twig", jTwigEnv);
 		JtwigModel model = JtwigModel.newModel().with("basePackage", basePackage).with("fieldMappings", computedFieldMappings)
-				.with("propertiesLocations", propertiesLocationsStrings).with("propertiesLocationsVariables", propertiesLocationsVariables)
-				.with("options", options != null ? options : new PropertiesStoreOptions());
+				.with("propertiesLocations", propertiesLocationsStrings).with("options", options != null ? options : new PropertiesStoreOptions());
 		try {
 			Path outputDirectoryPath = Files.createDirectories(Paths.get(generatedSourcesDirectory.getAbsolutePath(), basePackage.replaceAll("\\.", "/")));
 			Path outputFilePath = outputDirectoryPath.resolve(GENERATED_CLASS_NAME + ".java");

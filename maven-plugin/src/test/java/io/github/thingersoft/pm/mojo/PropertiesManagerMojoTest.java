@@ -52,7 +52,7 @@ public class PropertiesManagerMojoTest {
 		customDateFieldMapping.setFieldtype(SupportedTypes.DATE);
 		fieldMappings.add(customDateFieldMapping);
 		mojo.generateSources(Arrays.asList(testPropertiesFile, testPropertiesFile), new File(tempDir.toString()), TEST_PACKAGE, options,
-				Arrays.asList(testPropertiesFile, testPropertiesFile), null, fieldMappings);
+				Arrays.asList(testPropertiesFile.toString(), testPropertiesFile.toString()), fieldMappings);
 
 		JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
 		String generatedSourceBaseFilePath = tempDir.resolve(TEST_PACKAGE + "/" + PropertiesManagerMojo.GENERATED_CLASS_NAME).toString();
