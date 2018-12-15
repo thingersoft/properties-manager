@@ -54,7 +54,7 @@ public class PropertiesManagerMojo extends AbstractMojo {
 	}
 
 	public void generateSources(List<File> templateFiles, File generatedSourcesDirectory, String basePackage, PropertiesStoreOptions options,
-			List<File> propertiesLocations, List<String> propertiesLocationsVariables, List<FieldMapping> fieldMappings) {
+			List<File> propertiesLocations, List<String> propertiesLocationsVariables, List<FieldMapping> fieldMappings) throws MojoExecutionException {
 
 		// read properties files and merge them into a single map
 		Properties templateProperties = new Properties();
@@ -64,7 +64,7 @@ public class PropertiesManagerMojo extends AbstractMojo {
 				templateFileProperties.load(fis);
 				templateProperties.putAll(templateFileProperties);
 			} catch (IOException e) {
-				throw new RuntimeException("Can't read properties template file", e);
+				throw new MojoExecutionException("Can't read properties template file", e);
 			}
 		}
 
@@ -105,7 +105,7 @@ public class PropertiesManagerMojo extends AbstractMojo {
 				template.render(model, os);
 			}
 		} catch (IOException e) {
-			throw new RuntimeException("Can't write to output folder", e);
+			throw new MojoExecutionException("Can't write to output folder", e);
 		}
 	}
 
