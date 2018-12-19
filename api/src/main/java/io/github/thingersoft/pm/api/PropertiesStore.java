@@ -58,20 +58,32 @@ public final class PropertiesStore {
 
 	private static PropertiesStoreOptions options = new PropertiesStoreOptions();
 
-	static {
-		// look for classes annotated with @Properties
-		try (ScanResult scanResult = new ClassGraph().enableAllInfo().scan()) {
-			ClassInfoList classInfoList = scanResult.getClassesWithAnnotation(io.github.thingersoft.pm.api.annotations.Properties.class.getName());
-			for (ClassInfo mappedClassInfo : classInfoList) {
-				Class<?> mappedClass = mappedClassInfo.loadClass();
-				initByAnnotatedClass(mappedClass);
+	private static boolean annotatedClassInitialized = false;
+
+	public static void checkInitByAnnotatedClass(Class<?> annotatedClass) {
+		if (!annotatedClassInitialized) {
+			initByAnnotatedClass(annotatedClass);
+		}
+	}
+
+	public static void checkInitByAnnotatedClass() {
+		if (!annotatedClassInitialized) {
+			// look for classes annotated with @Properties
+			try (ScanResult scanResult = new ClassGraph().enableAllInfo().scan()) {
+				ClassInfoList classInfoList = scanResult.getClassesWithAnnotation(io.github.thingersoft.pm.api.annotations.Properties.class.getName());
+				for (ClassInfo mappedClassInfo : classInfoList) {
+					Class<?> mappedClass = mappedClassInfo.loadClass();
+					initByAnnotatedClass(mappedClass);
+				}
+			} catch (IllegalArgumentException e) {
+				throw new RuntimeException("Properties injection mapping failed", e);
 			}
-		} catch (IllegalArgumentException e) {
-			throw new RuntimeException("Properties injection mapping failed", e);
 		}
 	}
 
 	public static void initByAnnotatedClass(Class<?> mappedClass) {
+		annotatedClassInitialized = true;
+
 		// look for fields annotated with @Property within matching classes
 		for (Field field : mappedClass.getDeclaredFields()) {
 			if (field.isAnnotationPresent(Property.class)) {
@@ -105,6 +117,8 @@ public final class PropertiesStore {
 	 * file system locations of properties
 	 */
 	public synchronized static void loadProperties(String... propertiesLocations) {
+		checkInitByAnnotatedClass();
+
 		List<String> interpolatedPropertiesLocations = new ArrayList<>();
 		for (String propertiesLocation : propertiesLocations) {
 			String interpolatedLocation = propertiesLocation;
@@ -275,6 +289,7 @@ public final class PropertiesStore {
 	 * property value as a plain {@code String}
 	 */
 	public static String getProperty(String key) {
+		checkInitByAnnotatedClass();
 		return applicationProperties.getProperty(key);
 	}
 
@@ -406,6 +421,8 @@ public final class PropertiesStore {
 	 * the matching set of properties
 	 */
 	public static Properties getProperties(String keyPattern) {
+		checkInitByAnnotatedClass();
+
 		Properties filteredProperties = new Properties();
 		for (Entry<Object, Object> property : applicationProperties.entrySet()) {
 			if (Pattern.matches(keyPattern, (CharSequence) property.getKey())) {
