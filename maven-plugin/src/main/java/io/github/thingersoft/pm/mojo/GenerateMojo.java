@@ -18,6 +18,7 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.MavenProject;
 import org.jtwig.JtwigModel;
 import org.jtwig.JtwigTemplate;
 import org.jtwig.environment.EnvironmentConfiguration;
@@ -32,6 +33,9 @@ public class GenerateMojo extends AbstractMojo {
 
 	public static final String GOAL = "generate";
 	public static final String GENERATED_CLASS_NAME = "ApplicationProperties";
+
+	@Parameter(property = "project", defaultValue = "${project}")
+	private MavenProject project;
 
 	@Parameter
 	private List<String> propertiesLocations;
@@ -101,6 +105,9 @@ public class GenerateMojo extends AbstractMojo {
 			Path outputFilePath = outputDirectoryPath.resolve(GENERATED_CLASS_NAME + ".java");
 			try (OutputStream os = Files.newOutputStream(outputFilePath)) {
 				template.render(model, os);
+			}
+			if (project != null) {
+				project.addCompileSourceRoot(generatedSourcesDirectory.getAbsolutePath());
 			}
 		} catch (IOException e) {
 			throw new MojoExecutionException("Can't write to output folder", e);
