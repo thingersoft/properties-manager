@@ -27,10 +27,10 @@ import io.github.thingersoft.pm.api.data.PropertiesStoreOptions;
 import io.github.thingersoft.pm.api.data.SupportedTypes;
 import io.github.thingersoft.pm.mojo.jtwig.JoinAndWrapJtwigFunction;
 
-@Mojo(name = PropertiesManagerMojo.GOAL, defaultPhase = LifecyclePhase.GENERATE_SOURCES)
-public class PropertiesManagerMojo extends AbstractMojo {
+@Mojo(name = GenerateMojo.GOAL, defaultPhase = LifecyclePhase.GENERATE_SOURCES)
+public class GenerateMojo extends AbstractMojo {
 
-	public static final String GOAL = "map";
+	public static final String GOAL = "generate";
 	public static final String GENERATED_CLASS_NAME = "ApplicationProperties";
 
 	@Parameter

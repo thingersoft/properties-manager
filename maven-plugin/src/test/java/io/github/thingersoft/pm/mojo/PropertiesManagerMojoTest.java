@@ -34,7 +34,7 @@ public class PropertiesManagerMojoTest {
 
 	@Test
 	public void generateSourcesTest() throws Exception {
-		PropertiesManagerMojo mojo = new PropertiesManagerMojo();
+		GenerateMojo mojo = new GenerateMojo();
 
 		File testPropertiesFile = new File(ClassLoader.getSystemResource("test.properties").getFile());
 		Properties testProperties = new Properties();
@@ -55,11 +55,11 @@ public class PropertiesManagerMojoTest {
 				Arrays.asList(testPropertiesFile.toString(), testPropertiesFile.toString()), fieldMappings);
 
 		JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-		String generatedSourceBaseFilePath = tempDir.resolve(TEST_PACKAGE + "/" + PropertiesManagerMojo.GENERATED_CLASS_NAME).toString();
+		String generatedSourceBaseFilePath = tempDir.resolve(TEST_PACKAGE + "/" + GenerateMojo.GENERATED_CLASS_NAME).toString();
 		assertTrue(compiler.run(null, null, null, generatedSourceBaseFilePath + ".java") == 0);
 
 		try (URLClassLoader classLoader = new URLClassLoader(new URL[] { tempDir.toUri().toURL() })) {
-			Class<?> generatedClass = classLoader.loadClass(TEST_PACKAGE + "." + PropertiesManagerMojo.GENERATED_CLASS_NAME);
+			Class<?> generatedClass = classLoader.loadClass(TEST_PACKAGE + "." + GenerateMojo.GENERATED_CLASS_NAME);
 			PropertiesStore.initByAnnotatedClass(generatedClass);
 
 			for (Entry<Object, Object> testProperty : testProperties.entrySet()) {
