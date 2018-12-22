@@ -111,7 +111,7 @@ public final class PropertiesStore {
 	 * {myapp.conf.folder}/app.properties<br><br>
 	 * If location is a folder each *.properties file inside will be loaded.<br>
 	 * When {@code hotReload} is {@code true} a new monitor thread will be spawned for each scanned properties file.<br>
-	 * In this case the caller application must invoke {@link PropertiesStore#stopWatching()} before shutting down.
+	 * In this case the caller application may invoke {@link PropertiesStore#stopWatching()} before shutting down.
 	 * 
 	 * @param propertiesLocations
 	 * file system locations of properties
@@ -254,7 +254,6 @@ public final class PropertiesStore {
 
 	/**
 	 * Stops all threads watching for file changes. 
-	 * @throws Exception 
 	 */
 	public synchronized static void stopWatching() {
 		for (FileAlterationMonitor monitor : monitors.values()) {
@@ -272,7 +271,6 @@ public final class PropertiesStore {
 
 	/**
 	 * Resets {@link PropertiesStore} to its initial state. 
-	 * @throws Exception 
 	 */
 	public synchronized static void reset() {
 		stopWatching();
@@ -391,9 +389,9 @@ public final class PropertiesStore {
 	 * if the property value can't be parsed as {@code Date} using current {@code datePattern} and {@code locale}.
 	 * 
 	 * @see 
-	 * PropertiesStore#setDatePattern(String)
+	 * PropertiesStoreOptions#setDatePattern(String)
 	 * @see
-	 * PropertiesStore#setLocale(Locale)
+	 * PropertiesStoreOptions#setLocale(Locale)
 	 */
 	public static Date getDate(String key) throws IllegalArgumentException {
 		try {

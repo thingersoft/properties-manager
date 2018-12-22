@@ -45,7 +45,7 @@ public class PropertiesStoreOptions {
 	/**
 	 * Sets the pattern to be used for dates parsing
 	 * 
-	 * @param datePattern
+	 * @param datePattern pattern
 	 */
 	public void setDatePattern(String datePattern) {
 		if (StringUtils.isNotBlank(datePattern)) {
@@ -56,14 +56,14 @@ public class PropertiesStoreOptions {
 	/**
 	 * Sets the locale to be used for dates parsing
 	 * 
-	 * @param locale
+	 * @param locale locale
 	 */
 	public void setLocale(Locale locale) {
 		this.locale = locale;
 	}
 
 	/**
-	 * @param language
+	 * @param language language code
 	 * 
 	 * @see #setLocale(Locale)
 	 */
@@ -76,7 +76,7 @@ public class PropertiesStoreOptions {
 	/**
 	 * Enables properties files live monitoring
 	 * 
-	 * @param hotReload
+	 * @param hotReload hot reload flag
 	 */
 	public void setHotReload(boolean hotReload) {
 		this.hotReload = hotReload;
