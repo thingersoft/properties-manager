@@ -28,7 +28,9 @@
 	</developers>
 
 	<scm>
-		<developerConnection>scm:git:https://github.com/thingersoft/properties-manager.git</developerConnection>
+		<url>${scm.url}</url>
+		<connection>${scm.connection}</connection>
+		<developerConnection>${scm.connection}</developerConnection>
 		<tag>HEAD</tag>
 	</scm>
 
@@ -52,6 +54,8 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<java.version>1.7</java.version>
+		<scm.connection>scm:git:https://github.com/thingersoft/properties-manager.git</scm.connection>
+		<scm.url>https://github.com/thingersoft/properties-manager</scm.url>
 	</properties>
 
 	<profiles>
