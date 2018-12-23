@@ -1,5 +1,6 @@
 # Properties Manager
 
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.thingersoft/properties-manager-api.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22io.github.thingersoft%22%20AND%20a:%22properties-manager-api%22)
 [![Build Status](https://travis-ci.com/thingersoft/properties-manager.svg?branch=master)](https://travis-ci.com/thingersoft/properties-manager)
 
 A container agnostic tool for application wide configuration through properties files.
