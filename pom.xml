@@ -20,6 +20,13 @@
 		</license>
 	</licenses>
 
+	<developers>
+		<developer>
+			<name>Thinger Soft</name>
+			<email>thingersoft@gmail.com</email>
+		</developer>
+	</developers>
+
 	<scm>
 		<developerConnection>scm:git:https://github.com/thingersoft/properties-manager.git</developerConnection>
 		<tag>HEAD</tag>
