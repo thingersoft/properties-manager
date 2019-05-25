@@ -41,6 +41,8 @@ public class EnhanceMojo extends AbstractMojo {
 		ClassLoader originalContextClassLoader = Thread.currentThread().getContextClassLoader();
 
 		try {
+
+			// switch current thread classloader to include classes from project output directory
 			List<URL> classPath = new ArrayList<URL>();
 			for (final Object runtimeResource : project.getRuntimeClasspathElements()) {
 				classPath.add(resolveUrl((String) runtimeResource));
@@ -51,26 +53,33 @@ public class EnhanceMojo extends AbstractMojo {
 			URLClassLoader pluginClassLoader = URLClassLoader.newInstance(classPath.toArray(new URL[classPath.size()]), contextClassLoader);
 			Thread.currentThread().setContextClassLoader(pluginClassLoader);
 
+			// scan classpath for classes annotated with @Properties and store their fully qualified names into mappedClassesNames list
+			List<String> mappedClassesNames = new ArrayList<>();
 			try (ScanResult scanResult = new ClassGraph().enableAllInfo().scan()) {
 				ClassInfoList classInfoList = scanResult.getClassesWithAnnotation(io.github.thingersoft.pm.api.annotations.Properties.class.getName());
 				for (ClassInfo mappedClassInfo : classInfoList) {
-					// found class annotated with @Properties
-					ClassPool classPool = new ClassPool(ClassPool.getDefault());
-					classPool.childFirstLookup = true;
-					classPool.appendClassPath(targetClassesDirectory);
-					classPool.appendClassPath(new LoaderClassPath(Thread.currentThread().getContextClassLoader()));
-					classPool.appendSystemPath();
-					CtClass ctMappedClass = classPool.get(mappedClassInfo.getName());
-					CtConstructor initializer = ctMappedClass.makeClassInitializer();
-					initializer.setBody("io.github.thingersoft.pm.api.PropertiesStore.checkInitByAnnotatedClass(" + mappedClassInfo.getName() + ".class);");
-					ctMappedClass.writeFile(targetClassesDirectory);
+					mappedClassesNames.add(mappedClassInfo.getName());
 				}
+			}
+
+			// enhance classes annotated with @Properties by adding a static block that calls PropertiesStore initialization method
+			for (String mappedClassName : mappedClassesNames) {
+				ClassPool classPool = new ClassPool(ClassPool.getDefault());
+				classPool.childFirstLookup = true;
+				classPool.appendClassPath(targetClassesDirectory);
+				classPool.appendClassPath(new LoaderClassPath(Thread.currentThread().getContextClassLoader()));
+				classPool.appendSystemPath();
+				CtClass ctMappedClass = classPool.get(mappedClassName);
+				CtConstructor initializer = ctMappedClass.makeClassInitializer();
+				initializer.setBody("io.github.thingersoft.pm.api.PropertiesStore.checkInitByAnnotatedClass(" + mappedClassName + ".class);");
+				ctMappedClass.writeFile(targetClassesDirectory);
 			}
 
 		} catch (Exception e) {
 			getLog().error(e.getMessage(), e);
 			throw new MojoExecutionException(e.getMessage(), e);
 		} finally {
+			// switch back current thread to the original context classloader
 			Thread.currentThread().setContextClassLoader(originalContextClassLoader);
 		}
 

@@ -125,7 +125,7 @@ The above configuration will generate the following class and add it to your sou
     obfuscatedPropertyPattern = "", 
     obfuscatedPropertyPlaceholder = "******"
 )
-public class SampleProperties {
+public class ApplicationProperties {
 
     @Property("sample.string")
     public static String sampleString;
