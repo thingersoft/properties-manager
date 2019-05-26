@@ -115,7 +115,7 @@ public class GenerateMojo extends AbstractMojo {
 	}
 
 	private String toUncapitalizedCamelCase(String inputString) {
-		String[] splittedInputString = inputString.split("[_\\-\\.]");
+		String[] splittedInputString = inputString.split("[^a-zA-Z0-9]");
 		String outputString = StringUtils.uncapitalize(splittedInputString[0]);
 		for (int i = 1; i < splittedInputString.length; i++) {
 			outputString += StringUtils.capitalize(splittedInputString[i]);
